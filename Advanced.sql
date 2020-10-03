@@ -343,3 +343,69 @@ ORDER BY total_investments DESC
 
 
 
+--Write a query modification of the above example query that shows the duration of each ride as a percentage of the total time accrued by riders from each start_terminal
+
+SELECT 
+  start_terminal
+  , duration_seconds
+  , SUM(duration_seconds) OVER (PARTITION BY start_terminal) AS start_terminal_total
+  , duration_seconds / SUM(duration_seconds) OVER (PARTITION BY start_terminal) * 100.0 AS ride_duration_pct_of_total
+FROM tutorial.dc_bikeshare_q1_2012
+WHERE start_time < '2012-01-08'
+
+--The example query provided everything except ride_duration_pct_of_total.
+--I added this field to calculate the percent each ride contributes to the overall duration recorded from each start terminal.
+
+
+
+--Write a query that shows a running total of the duration of bike rides (similar to the last example), 
+--but grouped by end_terminal, and with ride duration sorted in descending order.
+
+SELECT 
+  end_terminal
+  , duration_seconds
+  , SUM(duration_seconds) OVER (PARTITION BY end_terminal ORDER BY duration_seconds DESC) AS running_total
+FROM tutorial.dc_bikeshare_q1_2012
+WHERE start_time < '2012-01-08'
+
+--The SUM() function adds up the duration_seconds.
+--The PARTITION BY groups my calculation by end_terminal. 
+--The ORDER BY creates the running total by having the sum increase every row, ordered from longest ride to shortest.
+
+
+
+--Write a query that shows the 5 longest rides from each starting terminal, ordered by terminal, and longest to shortest rides within each terminal. 
+--Limit to rides that occurred before Jan. 8, 2012.
+
+SELECT *
+FROM (
+  SELECT
+    start_terminal
+    , bike_number
+    , duration_seconds
+    , RANK() OVER (PARTITION BY start_terminal ORDER BY duration_seconds DESC) AS ride_rank
+  FROM tutorial.dc_bikeshare_q1_2012
+  WHERE start_time < '1/8/2012'
+) rides
+WHERE rides.ride_rank <= 5
+ORDER BY start_terminal, duration_seconds DESC
+
+--I used a subquery to calculate the rank of eadh ride within each start terminal.
+--In the outer query I limited the results to just the top 5 for each start terminal 
+--(since postgres doesn't allow use of windowed functions within the WHERE or HAVING clauses).
+
+
+
+--Write a query that shows only the duration of the trip and the percentile into which that duration falls (across the entire dataset—not partitioned by terminal).
+
+SELECT
+  duration_seconds
+  , NTILE(100) OVER (ORDER BY duration_seconds) AS percentile
+FROM tutorial.dc_bikeshare_q1_2012
+ORDER BY duration_seconds
+
+--This returns a whole lotta rows.
+--But I can see it being useful as a subquery when you want to get all records within a particular percentile threshold.
+
+
+
